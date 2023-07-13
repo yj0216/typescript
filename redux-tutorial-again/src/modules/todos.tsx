@@ -1,29 +1,46 @@
 import React, { Dispatch, createContext, useContext, useReducer } from "react";
 
 export type Action =
-| { type: 'todos/CHANGE_INPUT'; input: string }
-| { type: 'todos/INSERT'; todo: {id: number,text:string,done:boolean}}
-| { type: 'todos/TOGGLE'; id: number }
-| { type: 'todos/REMOVE'; id: number };
+    | { type: 'todos/CHANGE_INPUT'; input: string }
+    | { type: 'todos/INSERT'; todo: { id: number, text: string, done: boolean } }
+    | { type: 'todos/TOGGLE'; id: number }
+    | { type: 'todos/REMOVE'; id: number };
 
-let id = 3;
-export type InitialState = {
-    input: string,
-    todos: [
-        {
-            id: number,
-            text: string,
-            done: boolean
-        }
-    ]
+const CHANGE_INPUT = 'todos/CHANGE_INPUT' as const;
+const INSERT = 'todos/INSERT' as const;
+const TOGGLE = 'todos/TOGGLE' as const;
+const REMOVE = 'todos/REMOVE' as const;
+
+export const changeInput = () => ({ type: CHANGE_INPUT });
+export const insert = () => ({ type: INSERT });
+export const toggle = () => ({ type: TOGGLE });
+export const remove = () => ({ type: REMOVE });
+
+export type TodosState = {
+    input: string;
+    todos: {
+        id: number;
+        text: string;
+        done: boolean;
+    }
+
 }
 
-type TodosState = InitialState;
+const initialState: TodosState = {
+    input: '',
+    todos: {
+        id: 1,
+        text: 'Context API 배우기',
+        done: true
+    }
+};
 const TodosStateContext = createContext<TodosState | undefined>(undefined)
+
 type TodosDispatch = Dispatch<Action>;
+
 const TodosDispatchContext = createContext<TodosDispatch | undefined>(undefined)
 
-function todosReducer(state : TodosState, action:Action):TodosState {
+export function todosReducer(state: TodosState = initialState, action: Action) {
     switch (action.type) {
         case 'todos/CHANGE_INPUT':
             return {
@@ -33,38 +50,45 @@ function todosReducer(state : TodosState, action:Action):TodosState {
         case 'todos/INSERT':
             return {
                 ...state,
-                todos: state.todos.concat(action.todo)
+                todos: {
+                    id: action.todo.id,
+                    text: action.todo.text,
+                    done: false
+                }
             }
         case 'todos/TOGGLE':
             return {
                 ...state,
                 todos: state.todos.map(todo =>
-                    todo.id === action.id ? {...todo,done:!todo.done} : todo)
+                    todo.id === action.id ? { ...todo, done: !todo.done } : todo)
             }
         case 'todos/REMOVE':
             return {
                 ...state,
                 todos: state.todos.filter(todo => todo.id !== action.id)
-            };
+            }
         default:
             return state;
     }
 }
 
 
-export function TodosContextProvider({ children }: { children: React.ReactNode}) {
+export function TodosContextProvider({ children }: { children: React.ReactNode }) {
     const [todos, dispatch] = useReducer(todosReducer, [
         {
+            input: '',
             id: 1,
             text: 'Context API 배우기',
             done: true
         },
         {
+            input: '',
             id: 2,
             text: 'TypeScript 배우기',
             done: true
         },
         {
+            input: '',
             id: 3,
             text: 'TypeScript 와 Context API 함께 사용하기',
             done: false
@@ -86,10 +110,8 @@ export function useTodoState() {
     return state;
 }
 
-export function useTodosDispatch(){
+export function useTodosDispatch() {
     const dispatch = useContext(TodosDispatchContext);
-    if(!dispatch) throw new Error('TodosProvider not found');
+    if (!dispatch) throw new Error('TodosProvider not found');
     return dispatch;
 }
-
-export default todos;
