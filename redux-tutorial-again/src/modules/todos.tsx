@@ -1,117 +1,70 @@
-import React, { Dispatch, createContext, useContext, useReducer } from "react";
+ import { produce } from 'immer';
+import { ActionType, createReducer, createAction } from 'typesafe-actions';
 
-export type Action =
-    | { type: 'todos/CHANGE_INPUT'; input: string }
-    | { type: 'todos/INSERT'; todo: { id: number, text: string, done: boolean } }
-    | { type: 'todos/TOGGLE'; id: number }
-    | { type: 'todos/REMOVE'; id: number };
-
-const CHANGE_INPUT = 'todos/CHANGE_INPUT' as const;
-const INSERT = 'todos/INSERT' as const;
-const TOGGLE = 'todos/TOGGLE' as const;
-const REMOVE = 'todos/REMOVE' as const;
-
-export const changeInput = () => ({ type: CHANGE_INPUT });
-export const insert = () => ({ type: INSERT });
-export const toggle = () => ({ type: TOGGLE });
-export const remove = () => ({ type: REMOVE });
-
-export type TodosState = {
-    input: string;
-    todos: {
-        id: number;
-        text: string;
-        done: boolean;
-    }
-
+const CHANGE_INPUT = 'todos/CHANGE_INPUT';
+const INSERT = 'todos/INSERT';
+const TOGGLE = 'todos/TOGGLE';
+const REMOVE = 'todos/REMOVE';
+let id = 3;
+type TodosProps = {
+    id: number,
+    text: string,
+    done: boolean,
 }
 
+type TodosState = {
+    input: string,
+    todos: TodosProps[]
+}
 const initialState: TodosState = {
     input: '',
-    todos: {
-        id: 1,
-        text: 'Context API 배우기',
-        done: true
-    }
-};
-const TodosStateContext = createContext<TodosState | undefined>(undefined)
-
-type TodosDispatch = Dispatch<Action>;
-
-const TodosDispatchContext = createContext<TodosDispatch | undefined>(undefined)
-
-export function todosReducer(state: TodosState = initialState, action: Action) {
-    switch (action.type) {
-        case 'todos/CHANGE_INPUT':
-            return {
-                ...state,
-                input: action.input
-            };
-        case 'todos/INSERT':
-            return {
-                ...state,
-                todos: {
-                    id: action.todo.id,
-                    text: action.todo.text,
-                    done: false
-                }
-            }
-        case 'todos/TOGGLE':
-            return {
-                ...state,
-                todos: state.todos.map(todo =>
-                    todo.id === action.id ? { ...todo, done: !todo.done } : todo)
-            }
-        case 'todos/REMOVE':
-            return {
-                ...state,
-                todos: state.todos.filter(todo => todo.id !== action.id)
-            }
-        default:
-            return state;
-    }
-}
-
-
-export function TodosContextProvider({ children }: { children: React.ReactNode }) {
-    const [todos, dispatch] = useReducer(todosReducer, [
+    todos: [
         {
-            input: '',
             id: 1,
-            text: 'Context API 배우기',
+            text: '리덕스 기초 배우기',
             done: true
-        },
+        }
+        ,
         {
-            input: '',
             id: 2,
-            text: 'TypeScript 배우기',
-            done: true
-        },
-        {
-            input: '',
-            id: 3,
-            text: 'TypeScript 와 Context API 함께 사용하기',
+            text: '리액트와 리덕스 사용하기',
             done: false
         }
-    ])
-
-    return (
-        <TodosDispatchContext.Provider value={dispatch}>
-            <TodosStateContext.Provider value={todos}>
-                {children}
-            </TodosStateContext.Provider>
-        </TodosDispatchContext.Provider>
-    )
+    ]
 }
 
-export function useTodoState() {
-    const state = useContext(TodosStateContext);
-    if (!state) throw new Error('TodosProvider not found')
-    return state;
-}
+export const changeInput = createAction(CHANGE_INPUT, (input: string) => input)();
+export const insert = createAction(INSERT, (text: string) => ({
+    id: id++,
+    text: text,
+    done: false
+}))();
+export const toggle = createAction(TOGGLE, (id:number) => id)();
+export const remove = createAction(REMOVE, (id:number) => id)();
 
-export function useTodosDispatch() {
-    const dispatch = useContext(TodosDispatchContext);
-    if (!dispatch) throw new Error('TodosProvider not found');
-    return dispatch;
-}
+const actions = {changeInput,insert,toggle,remove}
+type TodosAction = ActionType<typeof actions>
+
+const todos = createReducer<TodosState,TodosAction>(initialState,{
+    [CHANGE_INPUT]: (state, { payload: input }) =>
+        produce(state, draft => {
+            draft.input = input;
+        }),
+    [INSERT]: (state, { payload: todo }) =>
+        produce(state, draft => {
+            draft.todos.push(todo);
+        }),
+    [TOGGLE]: (state, { payload: id }) =>
+        produce(state, draft => {
+            const todo = draft.todos.find(todo => todo.id === id);
+            todo!.done = !todo!.done;
+        }),
+    [REMOVE]: (state, { payload: id }) =>
+        produce(state, draft => {
+            const index = draft.todos.findIndex(todo => todo.id === id);
+            draft.todos.splice(index, 1);
+        })
+},
+);
+
+export default todos;
